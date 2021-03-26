@@ -1,2 +1,1 @@
-# thesis
-Repo de la tesis, versiòn con refactoring completo
+Repo de la Tesis para el Master en Big Data | Derderian-Milano-Mottini
