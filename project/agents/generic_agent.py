@@ -13,22 +13,22 @@ class GenericAgent:
     
     def __init__(self, gym_env, model, obs_processing_func, batch_size, learning_rate, gamma):
         
-        # Dispositivo sobre el que correran las ops
+        # Device to execute ops
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-        # Modelo del agente
+        # Agent's model
         self.policy_net = model.to(self.device)
 
-        # Función de costo (MSE)
+        # Cost function (MSE)
         self.loss_function = nn.MSELoss().to(self.device)
 
-        # Optimizador (Adam)
+        # Optimizer (Adam)
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=learning_rate)
 
-        # Funcion para procesar los estados.
+        # State processing function
         self.state_processing_function = obs_processing_func
 
-        # Ambiente
+        # Environment
         self.env = gym_env
 
         # Hyperparameters
@@ -37,13 +37,24 @@ class GenericAgent:
     
     
     def select_action(self, state, epsilon=0, train=True):
+        '''
+        Function to select an action according to its current state
+
+                Parameters:
+                        state (tuple): environment state
+                        epsilon (float): value for epsilon factor of exploration/exploitation
+                        train (boolean): var to control if current run is for training or not  
+                        
+                Returns:
+                        action (tuple): action to be taken on the environment
+        '''
         
-        # Accion greedy
+        # Greedy action
         action = torch.argmax(self.policy_net(state))
         action = action.item()
         
         if train:
-            # Si entreno, exploro
+            # When training, exploration is used
             if np.random.uniform() < epsilon:
                 action = np.random.choice(self.env.action_space.n)
             
@@ -68,11 +79,11 @@ class GenericAgent:
         dataset = []
         trajectories = []
 
-        while len(dataset) < num_samples:   # TODO (gmilano): corregir cuando num_samples % max_steps es distinto de cero
-            # Reinicio el ambiente 
+        while len(dataset) < num_samples:
+            # Reset environment
             state = self.state_processing_function(env.reset()).to(self.device)
 
-            # Trayectoria para guardar las transiciones (por episodio)
+            # List to save trayectories
             trajectory = []
 
             done = False
@@ -81,78 +92,85 @@ class GenericAgent:
                 action = None
                 
                 if action_type == 'greedy':
-                    # Elijo una acción totalmente greedy en función de un agente pre-entrenado
+                    # Select an action using full-greedy policy
                     action = self.select_action(state, 0, train=False)
 
                 elif action_type == 'e-greedy':
-                    # Elijo una acción greedy, manteniendo algo de exploración
+                    # Select an action using epsilon-greedy policy
                     if np.random.uniform() > epsilon:
                         action = self.select_action(state, 0, train=False)
                     else:
                         action = np.random.choice(env.action_space.n)
 
                 else:
-                    # Elijo una acción random
+                    # Choose random action
                     action = np.random.choice(env.action_space.n)
               
-                # Ejecuto la acción sobre el ambiente
+                # Execute action
                 next_state, reward, done, _ = env.step(action)
                 next_state = self.state_processing_function(next_state).to(self.device)
 
-                # Hack porque el ambiente de gym siempre tiene reward -1
-                # done = True se da únicamente cuando se llega a la bandera
-                #if done:
-                #  reward = 0
-
-                # Agrego la tupla al dataset
+                # Append tuple to dataset
                 dataset.append((state, action, reward, done, next_state))
-                # Agrego la tupla a la trayectoria
+
+                # Append tuple to trajectory
                 trajectory.append((state, action, reward, done, next_state))
 
                 if done:
-                    # Reviso que la trayectoria tenga la cantidad de max_steps transiciones
-                    # Caso contrario, completo con dummies
+                    # Check if trajectory has max_steps transitions
+                    # Otherwise, complete trayectory with dummies
                     if len(trajectory) < max_steps:
-                        # Para MountainCar-v0, se define el dummy como llegar a la bandera
+                        # For MountainCar-v0 env, a dummy is defined as the car reaching the flag
+                        # This means:
                         # Position > 0.5
                         # Velocity = 0 (could be any within accepted range)
-                        # Action = 1 (Don't accelerate)
+                        # Action = 1 (don't accelerate)
                         # Reward = 0
                         # Done = True
                         dummy = (torch.Tensor([0.55,0]), 1, 0, True, torch.Tensor([0.55,0]))
                         trajectory.extend(list(repeat(dummy, max_steps-len(trajectory))))
                     
-                    # Guardo la trayectoria
+                    # Save trajectory
                     trajectories.append(trajectory)
 
                     break
                 
-                # Actualizo el estado
+                # Update state
                 state = next_state
         
         return dataset, trajectories
 
 
     def record_test_episode(self, env):
+        '''
+        Function to record (as a video) a test episode
+
+                Parameters:
+                        env (gym.Env): selected environment
+                        
+                Returns:
+                        None
+        '''
+
         done = False
     
-        # Observar estado inicial como indica el algoritmo
+        # Check initial state
         state = self.state_processing_function(env.reset()).to(self.device)
 
         while not done:
-            env.render()  # Queremos hacer render para obtener un video al final.
+            env.render()
 
-            # Seleccione una accion de forma completamente greedy.
+            # Select action using full-greedy policy 
             action = self.select_action(state, 0, train=False)
 
-            # Ejecutar la accion, observar resultado y procesarlo como indica el algoritmo.
+            # Execute action, observe results and process them
             next_state, reward, done, _ = env.step(action)
             next_state = self.state_processing_function(next_state).to(self.device)
 
             if done:
                 break      
 
-            # Actualizar el estado
+            # Update state
             state = next_state
 
         env.close()
