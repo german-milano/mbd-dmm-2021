@@ -16,6 +16,6 @@ Contiene el código asociado a las pruebas auxiliares y experimentos (2, 5 y 6) 
 
 ## Autores
 
-* **Mariana Derderian** (Ingeniera en Telecomunicaciones).
+* **Mariana Derderian** (Ingeniera en Electrónica).
 * **Germán Milano** (Ingeniero en Telecomunicaciones, Tech-MBA).
 * **Bruno Mottini** (Contador Público).
