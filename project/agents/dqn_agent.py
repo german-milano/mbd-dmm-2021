@@ -143,7 +143,7 @@ class DQNAgent(GenericAgent):
             batch = self.memory.sample(self.batch_size)
             states, actions, rewards, dones, next_states = list(zip(*batch))
 
-            # Send tensors to appropiate device
+            # Send tensors to appropriate device
             states = (torch.stack(states)).to(self.device)
             actions = torch.tensor(actions).to(self.device)
             rewards = torch.tensor(rewards).to(self.device)
