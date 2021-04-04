@@ -13,11 +13,11 @@ from utils.early_stopping import EarlyStopper
 from agents.generic_agent import GenericAgent
 
 
-class FQNAgent(GenericAgent):
+class NFQAgent(GenericAgent):
     
     def __init__(self, gym_env, model, obs_processing_func, batch_size, learning_rate, gamma, dataset, trajectories, n_actions, horizon):
         # Calling parent's constructor
-        super(FQNAgent, self).__init__(gym_env, model, obs_processing_func, batch_size, learning_rate, gamma)
+        super(NFQAgent, self).__init__(gym_env, model, obs_processing_func, batch_size, learning_rate, gamma)
         
         # Dataset memory
         self.dataset = GenericMemory(data=dataset)
@@ -46,7 +46,7 @@ class FQNAgent(GenericAgent):
         '''
 
         # Get action
-        action = super(FQNAgent, self).select_action(state, epsilon, train)
+        action = super(NFQAgent, self).select_action(state, epsilon, train)
             
         return action
     

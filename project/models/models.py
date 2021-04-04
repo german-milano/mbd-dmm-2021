@@ -22,10 +22,10 @@ class DQNModel(nn.Module):
         return output
 
     
-class FQNModel(nn.Module):
+class NFQModel(nn.Module):
     
     def __init__(self, env_inputs, n_actions):
-        super(FQNModel, self).__init__()
+        super(NFQModel, self).__init__()
         
         # Hidden layer
         self.hidden = nn.Linear(in_features=env_inputs, out_features=200)
