@@ -10,8 +10,21 @@ from IPython.display import HTML
 from pyvirtualdisplay import Display
 
 
-# Función que "normaliza" los resultados para suavizar las gráficas que se presentan
 def results_normalizing(number_episodes, rewards, steps):
+    '''
+    Function that "normalizes" results in order to smooth plots
+
+            Parameters:
+                    number_episodes (int): number of episodes used in the training
+                    rewards (list): accumulated rewards per episode
+                    steps (list): accumulated steps per episode
+                    
+            Returns:
+                    avg_rewards (list): "smoothed" rewards
+                    avg_steps (list): "smoothed" steps
+                    episode_ticks (list): bin used for smoothing
+    '''
+
     # Average results every N timesteps for better visualization.
     average_range = 100
     episode_ticks = int(number_episodes / average_range)
@@ -27,7 +40,18 @@ def results_normalizing(number_episodes, rewards, steps):
 
 # Función que muestra los resultados de las corridas de un algoritmo
 def plot_results(number_episodes, rewards, steps):
-  
+    '''
+    Function to plot results ("smoothed" beforehand)
+
+            Parameters:
+                    number_episodes (int): number of episodes used in the training
+                    rewards (list): rewards per episode
+                    steps (list): steps per episode
+                    
+            Returns:
+                    None
+    '''
+
     # Normalizing
     avg_rewards, avg_steps, episode_ticks = results_normalizing(number_episodes, rewards, steps)
 
@@ -45,58 +69,37 @@ def plot_results(number_episodes, rewards, steps):
     plt.ylabel("Number Steps")
     plt.show()
 
-    
-# Función que grafica la comparación de los algoritmos Sarsa y Q-learning
-def plot_comparison(number_episodes, data):
-    # Tikz
-    episode_ticks = int(number_episodes / 100)
 
-    # Plot results
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15,15))
-    fig.subplots_adjust(hspace=.3)
-    fig.suptitle('DQN vs. Double DQN', 
-                 fontsize='x-large', 
-                 fontweight='demibold')
-
-    # Accumulated reward
-    ax1.set_xlabel("Episode")
-    ax1.set_ylabel("Reward")
-    ax1.set_title("Accumulated Reward")
-    ax1.grid(color='black', alpha= .2, linestyle='--', axis='both', linewidth=1)
-    ax1.plot(range(episode_ticks), data['dqn']['rewards'], label=r"DQN")
-    ax1.plot(range(episode_ticks), data['ddqn']['rewards'], label=r"D-DQN")
-
-    # Number of iterations
-    ax2.set_xlabel("Episode")
-    ax2.set_ylabel("Steps")
-    ax2.set_title("Steps Needed per Episode")
-    ax2.grid(color='black', alpha= .2, linestyle='--', axis='both', linewidth=1)
-    ax2.plot(range(episode_ticks), data['dqn']['steps'], label=r"DQN")
-    ax2.plot(range(episode_ticks), data['ddqn']['steps'], label=r"D-DQN")
-
-    handles, labels = ax2.get_legend_handles_labels()
-    
-    # Using ';' to avoid unnecessary prints
-    fig.legend(handles, labels, loc='upper right', fontsize='large');
-
-
-#display = Display(visible=0, size=(1400, 900))
-#display.start()
+# Vars to display video
+display = Display(visible=0, size=(1400, 900))
+display.start()
 
 def wrap_env(env):
-    """
-    Wrapper del ambiente donde definimos un Monitor que guarda la visualizacion como un archivo de video.
-    """
+    '''
+    Function to wrap the environment and save the visualization as a video file
+
+            Parameters:
+                    env (gym.Env): selected environment
+                    
+            Returns:
+                    env (Monitor): wrapped environment
+    '''
 
     env = Monitor(env, './video', force=True)
     return env
 
 
 def show_video():
-    """
-    Utility function to enable video recording of gym environment and displaying it
-    To enable video, just do "env = wrap_env(env)""
-    """
+    '''
+    Function to enable video recording of gym environment and displaying it
+
+            Parameters:
+                    None
+                    
+            Returns:
+                    None
+    '''
+
     mp4list = glob.glob('video/*.mp4')
     if len(mp4list) > 0:
         mp4 = mp4list[0]
