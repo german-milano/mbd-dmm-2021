@@ -9,7 +9,7 @@ def process_state(obs):
 
 def load_dataset(filename):
     '''
-    Returns a list of environment samples, read from a pickle file
+    Function to load a list of samples from Pickle file
 
             Parameters:
                     filename (str): path to pickle file
@@ -30,7 +30,7 @@ def load_dataset(filename):
 
 def save_dataset(filename, dataset):
     '''
-    Returns a list of environment samples, read from a pickle file
+    Function to save a list of samples into a Pickle file
 
             Parameters:
                     dataset (list): list of samples as transitions
