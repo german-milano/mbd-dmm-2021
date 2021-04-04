@@ -16,10 +16,10 @@ from utils.memories import ReplayMemory
 class DQNAgent(GenericAgent):
 
     def __init__(self, gym_env, model, obs_processing_func, memory_buffer_size, batch_size, learning_rate, gamma, epsilon_i, epsilon_f, epsilon_anneal_time):
-        # Llamo al constructor del parent
+        # Calling parent's constructor
         super(DQNAgent, self).__init__(gym_env, model, obs_processing_func, batch_size, learning_rate, gamma)
         
-        # Memoria del agente 
+        # Agent's memory
         self.memory = ReplayMemory(memory_buffer_size)
 
         # Epsilon
@@ -29,38 +29,71 @@ class DQNAgent(GenericAgent):
 
 
     def compute_epsilon(self, steps_so_far):
-        # Epsilon linealmente decreciente
+        '''
+        Function to calculate a value which represents epsilon factor of exploration/exploitation
+
+                Parameters:
+                        steps_so_far (int): number of steps taken
+                        
+                Returns:
+                        eps (float): calculated value for epsilon factor of exploration/exploitation
+        '''
+        # Linearly decreasing epsilon
         eps = max(self.epsilon_i - steps_so_far * (self.epsilon_i - self.epsilon_f)/self.epsilon_anneal, self.epsilon_f)
         return eps
 
 
     def select_action(self, state, current_steps, train=True):
-        # Calculo epsilon
+        '''
+        Function to select an action according to its current state
+
+                Parameters:
+                        state (tuple): environment state
+                        current_steps (int): number of steps taken
+                        train (boolean): var to control if current run is for training or not  
+                        
+                Returns:
+                        action (tuple): action to be taken on the environment
+        '''
+        # Calculate epsilon
         epsilon = self.compute_epsilon(current_steps)
         
-        # Obtengo la acción
+        # Get action
         action = super(DQNAgent, self).select_action(state, epsilon, train)
             
         return action
 
 
     def train(self, number_episodes, max_steps):
-        rewards = []                              # Trazabilidad de los rewards por episodio
-        episode_steps = np.zeros(number_episodes) # Trazabilidad de steps por episodio
+        '''
+        Function to train a DQN agent, which returns a list of accumulated rewards per episode and a list
+        of the number of steps taken per episode
+
+                Parameters:
+                        number_episodes (int): durantion (in episodes) for the training
+                        max_steps (int): max number of steps allowed per episode
+                        
+                Returns:
+                        rewards (list): accumulated rewards per episode
+                        episode_steps (list): number of steps taken per episode
+        '''
+
+        rewards = []                              # Rewards traceability
+        episode_steps = np.zeros(number_episodes) # Steps traceability
         total_steps = 0
 
         for ep in tqdm(range(number_episodes), unit=' episodes'):
-            # Observar estado inicial como indica el algoritmo
+            # Observe initial state
             state = self.state_processing_function(self.env.reset()).to(self.device)
             
             current_episode_reward = 0.0
 
             for s in range(max_steps):
 
-                # Seleccionar accion usando una política epsilon-greedy.
+                # Select action using epsilon-greedy policy
                 action = self.select_action(state, total_steps, train=True)
 
-                # Ejecutar la accion, observar resultado y procesarlo como indica el algoritmo.
+                # Execute action, observe results and process them
                 next_state, reward, done, _ = self.env.step(action)
                 next_state = self.state_processing_function(next_state).to(self.device)
 
@@ -68,13 +101,13 @@ class DQNAgent(GenericAgent):
                 episode_steps[ep] += 1
                 total_steps += 1
 
-                # Guardar la transicion en la memoria
+                # Store transition in replay memory
                 self.memory.add(state, action, reward, done, next_state)
 
-                # Actualizar el estado
+                # Update state
                 state = next_state
 
-                # Actualizar el modelo
+                # Update model
                 self.update_weights()
 
                 if done: 
@@ -92,34 +125,43 @@ class DQNAgent(GenericAgent):
 
 
     def update_weights(self):
+        '''
+        Function to update ANN weights using gradient descent
+
+                Parameters:
+                        None
+                        
+                Returns:
+                        None
+        '''
+
         if len(self.memory) > self.batch_size:
-            # Resetear gradientes
+            # Reset gradients
             self.optimizer.zero_grad() 
 
-            # Obtener un minibatch de la memoria 
+            # Get mini-batch sample from memory
             batch = self.memory.sample(self.batch_size)
             states, actions, rewards, dones, next_states = list(zip(*batch))
 
-            # Enviar los tensores al dispositivo correspondiente.
+            # Send tensors to appropiate device
             states = (torch.stack(states)).to(self.device)
             actions = torch.tensor(actions).to(self.device)
             rewards = torch.tensor(rewards).to(self.device)
             dones = torch.tensor(dones).float().to(self.device)
             next_states = (torch.stack(next_states)).to(self.device)
 
-            # Obetener el valor estado-accion (Q) de acuerdo a la policy net para todo elemento (estados) del minibatch.
+            # Get Q value for the mini-batch according to policy net
             q_actual = self.policy_net(states).gather(dim=1, index=actions.view(-1,1)).squeeze()
   
-            # Obtener max a' Q para los siguientes estados (del minibatch). Es importante hacer .detach() al resultado de este computo.
-            # Si el estado siguiente es terminal (done) este valor debería ser 0.          
+            # Get max a' Q value for the next states of the mini-batch
             max_q_next_state = self.policy_net(next_states)
             max_q_next_state = max_q_next_state.max(dim=1)[0]*(1 - dones)
             max_q_next_state = max_q_next_state.detach()
 
-            # Compute el target de DQN de acuerdo a la Ecuacion (3) del paper.
+            # Compute DQN's target value
             target = rewards + self.gamma * max_q_next_state
         
-            # Compute el costo y actualice los pesos.
-            # En Pytorch la funcion de costo se llaman con (predicciones, objetivos) en ese orden.
+            # Compute cost and update weights
+            # Should be (predictions, targets)
             self.loss_function(q_actual, target).backward()
             self.optimizer.step()
