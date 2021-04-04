@@ -75,9 +75,6 @@ class FQNAgent(GenericAgent):
 
             while not done:
 
-                # Define action
-                action = None
-
                 # Select action using a softmax-based policy 
                 action_vec = self.policy_net(state).view(-1,1).squeeze().detach()
 
